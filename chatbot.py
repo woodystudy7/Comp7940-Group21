@@ -46,7 +46,7 @@ def search(update: Updater, context: CallbackContext) -> None:
             #update.message.reply_text(i['title'])
             if '-' not in i['title']:
                 keyboard.append([InlineKeyboardButton(i["title"], callback_data=i["title"])])
-        update.message.reply_text('dead1')
+        update.message.reply_text('dead2')
         reply_markup = InlineKeyboardMarkup(keyboard)
         #update.message.reply_text(str(reply_markup))
         update.message.reply_text("Please select", reply_markup=reply_markup) 
