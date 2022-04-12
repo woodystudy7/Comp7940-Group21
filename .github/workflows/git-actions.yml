@@ -12,9 +12,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup Google Cloud
-        uses: google-github-actions/setup-gcloud@master
+        uses: google-github-actions/setup-gcloud@main
       - name: Security vulnerabilities scan
-        uses: aufdenpunkt/python-safety-check@master
+        uses: aufdenpunkt/python-safety-check@main
         env:
           DEP_PATH: ./requirements.txt
 #      - name: Deploy
