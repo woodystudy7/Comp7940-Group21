@@ -1,0 +1,32 @@
+name: Deploy
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup Google Cloud
+        uses: google-github-actions/setup-gcloud@master
+      - name: Security vulnerabilities scan
+        uses: aufdenpunkt/python-safety-check@master
+        env:
+          DEP_PATH: ./requirements.txt
+#      - name: Deploy
+#        env:
+#          HEROKU_API_KEY: ${{secrets.HEROKU_API_KEY}}
+#          HEROKU_APP_NAME: "comp7940-chatbot-woody"  # Rename this to the app of your Heroku app.
+#        run: git push -f https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP_NAME.git main
+      - name: Build and push
+        uses: RafikFarhad/push-to-gcr-github-action@v4
+        with:
+          gcloud_service_key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+          registry: asia.gcr.io
+          project_id: upbeat-aura-345616
+          image_name: testbot
+          dockerfile: ./Dockerfile

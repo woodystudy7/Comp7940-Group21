@@ -3,6 +3,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 # The messageHandler is used for all message updates
 import configparser
+import os
 import logging
 import firebase_admin
 import omdb
@@ -11,9 +12,12 @@ from py_youtube import Search ,Data
 def main():
     # Load your token and create an Updater for your Bot
     omdb.set_default('apikey', '1bd45b7f')
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-    updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
+    # config = configparser.ConfigParser()
+    # config.read('config.ini')
+    # updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
+
+    updater = Updater(token=(os.environ['ACCESS_TOKEN']), use_context=True)
+
     dispatcher = updater.dispatcher
     # You can set this logging module, so you will know when and why things do not work as expected
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
