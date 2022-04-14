@@ -22,6 +22,6 @@ jobs:
         with:
           gcloud_service_key: ${{ secrets.GCLOUD_SERVICE_KEY }}
           registry: asia.gcr.io
-          project_id: comp7940-group21
+          project_id: ${{ secrets.PROJECT_ID }}
           image_name: pj_chatbot
           dockerfile: ./Dockerfile

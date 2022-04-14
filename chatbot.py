@@ -11,7 +11,7 @@ from py_youtube import Search ,Data
 
 def main():
     # Load your token and create an Updater for your Bot
-    omdb.set_default('apikey', '1bd45b7f')
+    omdb.set_default('apikey', os.environ['OMDB_APIKEY'])
     # config = configparser.ConfigParser()
     # config.read('config.ini')
     # updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
