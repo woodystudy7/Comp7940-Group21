@@ -18,12 +18,13 @@ import numpy as np
 
 def main():
     # Load your token and create an Updater for your Bot
-    #config = configparser.ConfigParser()
-    #config.read('config.ini')
+    omdb.set_default('apikey', os.environ['OMDB_APIKEY'])
+    config = configparser.ConfigParser()
+    config.read('config.ini')
 
     #TELEGRAM
-    #updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
-    updater = Updater(token=(os.environ['ACCESS_TOKEN']), use_context=True)
+    updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
+    #updater = Updater(token=(os.environ['ACCESS_TOKEN']), use_context=True)
 
     #FIREBASE
     cred = credentials.Certificate('firebase-adminsdk.json')
@@ -166,6 +167,8 @@ def search(update: Updater, context: CallbackContext) -> None:
         for i in raw:
             if '-' not in i['title']:
                 keyboard.append([InlineKeyboardButton(i["title"], callback_data='1_1 '+i["title"])])
+                keyboard.append([InlineKeyboardButton(i["title"], callback_data=i["title"])])
+        update.message.reply_text('test1')
         reply_markup = InlineKeyboardMarkup(keyboard)
         update.message.reply_text("Please select", reply_markup=reply_markup)
     except (IndexError, ValueError):
