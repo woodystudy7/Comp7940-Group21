@@ -18,7 +18,7 @@ import numpy as np
 
 def main():
     # Load your token and create an Updater for your Bot
-    omdb.set_default('apikey', os.environ['OMDB_APIKEY'])
+    #omdb.set_default('apikey', os.environ['OMDB_APIKEY'])
     #config = configparser.ConfigParser()
     #config.read('config.ini')
 
