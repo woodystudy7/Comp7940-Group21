@@ -19,12 +19,12 @@ import numpy as np
 def main():
     # Load your token and create an Updater for your Bot
     omdb.set_default('apikey', os.environ['OMDB_APIKEY'])
-    config = configparser.ConfigParser()
-    config.read('config.ini')
+    #config = configparser.ConfigParser()
+    #config.read('config.ini')
 
     #TELEGRAM
-    updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
-    #updater = Updater(token=(os.environ['ACCESS_TOKEN']), use_context=True)
+    #updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
+    updater = Updater(token=(os.environ['ACCESS_TOKEN']), use_context=True)
 
     #FIREBASE
     cred = credentials.Certificate('firebase-adminsdk.json')
@@ -36,8 +36,8 @@ def main():
     })
 
     #OMDB
-    OMDB_API_KEY= '70dae977'
-    omdb.set_default('apikey', OMDB_API_KEY)
+    #OMDB_API_KEY= '70dae977'
+    omdb.set_default('apikey', os.environ['OMDB_API_KEY'])
 
     dispatcher = updater.dispatcher
     # You can set this logging module, so you will know when and why things do not work as expected
