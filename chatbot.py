@@ -167,8 +167,6 @@ def search(update: Updater, context: CallbackContext) -> None:
         for i in raw:
             if '-' not in i['title']:
                 keyboard.append([InlineKeyboardButton(i["title"], callback_data='1_1 '+i["title"])])
-                keyboard.append([InlineKeyboardButton(i["title"], callback_data=i["title"])])
-        update.message.reply_text('test1')
         reply_markup = InlineKeyboardMarkup(keyboard)
         update.message.reply_text("Please select", reply_markup=reply_markup)
     except (IndexError, ValueError):
