@@ -209,7 +209,9 @@ def button(update: Updater, context: CallbackContext) -> None:
             ref = db.reference("/Comment/" + movie_chosen + "/")
             comment_dict = ref.get()
             dict_len = len(comment_dict)
-            if not dict_len:
+            if not comment_dict:
+                update.message.reply_text('No comment of this movie in our database! Please share your comment.')
+            else:
                 all_review = 'Reviews : \n'
                 if dict_len < 3:
                     for k1, v1 in comment_dict.items():
@@ -220,8 +222,6 @@ def button(update: Updater, context: CallbackContext) -> None:
                     for k1, v1 in sorted(comment_dict.items())[:3]:
                         all_review += '\n' + list(v1.keys())[0] + ' : ' + list(v1.values())[0]
                     context.bot.send_message(chat_id=update.effective_chat.id, text=all_review)
-            else:
-                update.message.reply_text('No comment of this movie in our database! Please share your comment.')
         elif query.data.split(" ",1)[1] == 'Rating':
             keyboard = [[1, 2, 3, 4, 5],[6, 7, 8, 9, 10]]
             reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
