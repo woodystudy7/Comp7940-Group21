@@ -1,0 +1,1 @@
+{"jobID":"dc28b08c-5f19-dc26-60e0-aee9bfe1f26e","spec":{"type":"policy","cause":{"Message":"","User":"Woody Wong \u003c20464835@life.hkbu.edu.hk\u003e"},"spec":{"chatbot:deployment/chatbot-deployment":{"add":{"automated":"true"},"remove":{}}}},"result":null}
