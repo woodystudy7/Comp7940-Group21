@@ -1,6 +1,6 @@
 ## chatbot.py
 from logging.handlers import RotatingFileHandler
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 # The messageHandler is used for all message updates
@@ -15,10 +15,11 @@ from firebase_admin import credentials
 from firebase_admin import db
 
 import numpy as np 
+import re
+import collections
 
 def main():
     # Load your token and create an Updater for your Bot
-    #omdb.set_default('apikey', os.environ['OMDB_APIKEY'])
     #config = configparser.ConfigParser()
     #config.read('config.ini')
 
@@ -53,15 +54,17 @@ def main():
     dispatcher.add_handler(CommandHandler("toprate", toprate))
     dispatcher.add_handler(CommandHandler("contribute", contribute))
     dispatcher.add_handler(CommandHandler("recommend", recommend))
-    dispatcher.add_handler(CommandHandler("comment", comment)) 
     dispatcher.add_handler(CommandHandler("help", help))    
     dispatcher.add_handler(CallbackQueryHandler(button))
 
-    global comment_ind
-    comment_ind = 0
+    global g_comment_ind
+    g_comment_ind = 0
 
-    global rating_ind
-    rating_ind = 0
+    global g_rating_ind
+    g_rating_ind = 0
+
+    global g_rating
+    g_rating = 0
 
     # To start the bot:
     updater.start_polling()
@@ -74,16 +77,22 @@ def listToString(s):
 def average(lst):
     return sum(lst) / len(lst)
 
+def cnt(lst):
+    counter = collections.Counter()
+    for d in lst: 
+        counter.update(d)
+    result = dict(counter)
+    return result
+
 def help(update: Updater, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     try:
-        line1 = "/help" + "\n" + "- command list test3"
+        line1 = "/help" + "\n" + "- command list"
         line2 = "/search <keyword>" + "\n" + "- search movie"
         line3 = "/toprate" + "\n" + "- top 10 rated movie"
         line4 = "/contribute" + "\n" + "- most active commentator"
         line5 = "/recommend" + "\n" + "- movie recommendationa"
-        line6 = "/comment" + "\n" + "- leave comment for movie"
-        msg =  line1 + "\n" + line2 + "\n" + line3 + "\n" + line4 + "\n" + line5 + "\n" + line6
+        msg =  line1 + "\n" + line2 + "\n" + line3 + "\n" + line4 + "\n" + line5
         context.bot.send_message(chat_id=update.effective_chat.id, text= msg)
     except (IndexError, ValueError):
         update.message.reply_text('Usage: /help <keyword>')
@@ -94,43 +103,77 @@ def toprate(update: Updater, context: CallbackContext) -> None:
         ref = db.reference("/Rating/")
         rating_dict = ref.get()
         user_raing_avg = {}
-        for k1, v1 in rating_dict.items():
-            movieid = str(k1)
-            movierate = []
-            for k2, v2 in v1.items():
-                movierate.append(list(v2.values())[0])
-                movierate_avg = average(movierate)
-                user_raing_avg[movieid] = movierate_avg
-        sorted_user_raing_avg_keys = sorted(user_raing_avg, key=user_raing_avg.get, reverse=True)
-        toprate_result = ''
-        if len(sorted_user_raing_avg_keys) < 10:
-            for k3 in sorted_user_raing_avg_keys:
-                toprate_result += '\n' + k3 + ' : ' + str(user_raing_avg[k3])
+        if rating_dict is not None:
+            for k1, v1 in rating_dict.items():
+                raw = omdb.get(imdbid=str(k1))
+                movieid = raw['title']
+                movierate = []
+                for k2, v2 in v1.items():
+                    movierate.append(list(v2.values())[0])
+                    movierate_avg = round(average(movierate), 1)
+                    user_raing_avg[movieid] = movierate_avg
+            sorted_user_raing_avg_keys = sorted(user_raing_avg, key=user_raing_avg.get, reverse=True)
+            toprate_result = ''
+            if len(sorted_user_raing_avg_keys) < 10:
+                for k3 in sorted_user_raing_avg_keys:
+                    toprate_result += '\n' + k3 + ' : ' + str(user_raing_avg[k3])
+            else:
+                for k3 in sorted_user_raing_avg_keys[:10]:
+                    toprate_result += '\n' + k3 + ' : ' + str(user_raing_avg[k3])
+            update.message.reply_text('Congratulation to our top 10 best rated movies. \n' + toprate_result)
         else:
-            for k3 in sorted_user_raing_avg_keys[10:]:
-                toprate_result += '\n' + k3 + ' : ' + str(user_raing_avg[k3])
-        update.message.reply_text('Congratulation to our top 10 best rated movies. \n' + toprate_result)
+            update.message.reply_text('No comment or rating in our database! Please share your thoughts with us.')    
     except (IndexError, ValueError):
-        update.message.reply_text('No rated movie in our database! Please share your first movie rating.')
+        update.message.reply_text('No comment or rating in our database! Please share your thoughts with us.')
 
 def contribute(update: Updater, context: CallbackContext) -> None:
     """Send a message when the command /contribute is issued."""
     try:
-        ref = db.reference("/Comment/")
-        comment_dict = ref.get()
+        comb_list = []
+        c_ref = db.reference("/Comment/")
+        comment_dict = c_ref.get()
         user_comment_count = {}
-        for k1, v1 in comment_dict.items():
-            for k2, v2 in v1.items():
-                userid = list(v2.keys())[0]
-                if userid not in user_comment_count.keys():
-                    user_comment_count[userid] = 1
-                elif userid in user_comment_count.keys():
-                    user_comment_count[userid] += 1
-        active_user = max(user_comment_count, key=user_comment_count.get)
-        comment_vol = user_comment_count[active_user]
-        update.message.reply_text('Congratulation to our most active user. \n' + active_user + ' has left ' + str(comment_vol) + ' comments.')
+        r_ref = db.reference("/Rating/")
+        rating_dict = r_ref.get()
+        user_rating_count = {}
+        if comment_dict is not None:
+            for k1, v1 in comment_dict.items():
+                for k2, v2 in v1.items():
+                    userid = list(v2.keys())[0]
+                    if userid not in user_comment_count.keys():
+                        user_comment_count[userid] = 1
+                    elif userid in user_comment_count.keys():
+                        user_comment_count[userid] += 1
+            comb_list.append(user_comment_count)
+            result=cnt(comb_list)
+            active_user = max(result, key=result.get)
+            comment_vol = user_comment_count[active_user]
+            msg_txt_2='\n - ' + str(comment_vol) + ' comment'
+        if rating_dict is not None:
+            for k1, v1 in rating_dict.items():
+                for k2, v2 in v1.items():
+                    userid = list(v2.keys())[0]
+                    if userid not in user_rating_count.keys():
+                        user_rating_count[userid] = 1
+                    elif userid in user_rating_count.keys():
+                        user_rating_count[userid] += 1
+            comb_list.append(user_rating_count)
+            result=cnt(comb_list)
+            active_user = max(result, key=result.get)
+            rating_vol = user_rating_count[active_user]
+            msg_txt_3='\n - ' + str(rating_vol) + ' rating'
+        result=cnt(comb_list)
+        active_user = max(result, key=result.get)
+        if active_user in user_rating_count and active_user in user_comment_count:
+            update.message.reply_text('Congratulation to our most active user. \n' + 'user_' + active_user.split('_')[1] + ' has left ' + msg_txt_2 + msg_txt_3)
+        elif active_user in user_rating_count and active_user not in user_comment_count:
+            rating_vol = user_rating_count[active_user]
+            update.message.reply_text('Congratulation to our most active user. \n' + 'user_' + active_user.split('_')[1] + ' has left ' + msg_txt_3)
+        elif active_user in user_comment_count and active_user not in user_rating_count:
+            comment_vol = user_comment_count[active_user]
+            update.message.reply_text('Congratulation to our most active user. \n' + 'user_' + active_user.split('_')[1] + ' has left ' + msg_txt_2)
     except (IndexError, ValueError):
-        update.message.reply_text('Usage: /contribute <keyword>')
+        update.message.reply_text('No comment or rating in our database! Please share your thoughts with us.')
 
 def recommend(update: Updater, context: CallbackContext) -> None:
     """Send a message when the command /recommend is issued."""
@@ -138,134 +181,148 @@ def recommend(update: Updater, context: CallbackContext) -> None:
         ref = db.reference("/Rating/")
         rating_dict = ref.get()
         user_raing_avg = {}
-        for k1, v1 in rating_dict.items():
-            movieid = str(k1)
-            movierate = []
-            for k2, v2 in v1.items():
-                movierate.append(list(v2.values())[0])
-                movierate_avg = average(movierate)
-                user_raing_avg[movieid] = movierate_avg
-        sorted_user_raing_avg_keys = sorted(user_raing_avg, key=user_raing_avg.get, reverse=True)
-        if len(sorted_user_raing_avg_keys) < 10:
-            print(len(sorted_user_raing_avg_keys))
-            randnbr=np.random.randint(1, len(sorted_user_raing_avg_keys))
-            print(randnbr)
-            rmd = sorted_user_raing_avg_keys[randnbr]
-            #rmd = sorted_user_raing_avg_keys[randnbr] + ' : ' + str(user_raing_avg[sorted_user_raing_avg_keys[randnbr]])
+        if rating_dict is not None:
+            for k1, v1 in rating_dict.items():
+                movieid = str(k1)
+                movierate = []
+                for k2, v2 in v1.items():
+                    movierate.append(list(v2.values())[0])
+                    movierate_avg = average(movierate)
+                    user_raing_avg[movieid] = movierate_avg
+            sorted_user_raing_avg_keys = sorted(user_raing_avg, key=user_raing_avg.get, reverse=True)
+            if len(sorted_user_raing_avg_keys) < 10:
+                print(len(sorted_user_raing_avg_keys))
+                randnbr=np.random.randint(1, len(sorted_user_raing_avg_keys))
+                print(randnbr)
+                rmd = sorted_user_raing_avg_keys[randnbr]
+            else:
+                randnbr=np.random.randint(1,10)
+                rmd = sorted_user_raing_avg_keys[10:][randnbr]
+            update.message.reply_text('We recommend you check out \n' + rmd)
         else:
-            randnbr=np.random.randint(1,10)
-            rmd = sorted_user_raing_avg_keys[10:][randnbr]
-        update.message.reply_text('We recommend you check out \n' + rmd)
+            update.message.reply_text('No recommendation from other users at the moment! Please share your thoughts with us.')
     except (IndexError, ValueError):
-        update.message.reply_text('Usage: /recommend <keyword>')
+        update.message.reply_text('No recommendation from other users at the moment! Please share your thoughts with us.')
 
 def search(update: Updater, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     try:
-        raw = omdb.search_movie(context.args)
+        out_list_1 = [re.sub(r'[^a-zA-Z0-9]','',string) for string in context.args]
+        out_list_2 = ['*' + sub + '*' for sub in out_list_1]
+        raw = omdb.search_movie(out_list_2)
         keyboard = []
-        for i in raw:
-            if '-' not in i['title']:
-                keyboard.append([InlineKeyboardButton(i["title"], callback_data='1_1 '+i["title"])])
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text("Please select", reply_markup=reply_markup)
+        dup_chk = []
+        n=0
+        if raw is None:
+            update.message.reply_text("No search result! Please select other keywords.")
+        else:
+            for i in raw:
+                if n <=5:
+                    if i['imdb_id'] not in dup_chk:
+                        dup_chk.append(i['imdb_id'])
+                        keyboard.append([InlineKeyboardButton(i["title"], callback_data='1_1 '+i["imdb_id"])])
+                        n+=1
+                else:
+                    break
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            context.bot.send_message(chat_id=update.effective_chat.id, text="Please select one movie from below or revise your keyword if you can't find what you want.", reply_markup=reply_markup)
     except (IndexError, ValueError):
-        update.message.reply_text('Usage: /search <keyword>')
+        update.message.reply_text("No search result! Please select other keywords.")
 
 def button(update: Updater, context: CallbackContext) -> None:
     """Parses the CallbackQuery and updates the message text."""
 
     query = update.callback_query
-    print(query.from_user.id)
-    print(query.from_user['username'])
-    print(query.from_user['first_name'])
-    print(query.from_user['id'])
     query.answer()
-    if query.data == 'Like':
-        query.edit_message_text(text=f"Liked")
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Liked')
-    elif query.data == 'Dislike':
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Disiked')        
-    elif query.data.split(" ",1)[0] == '1_1':
+    if query.data.split(" ",1)[0] == '1_1':
             global movie_chosen
             movie_chosen = query.data.split(" ",1)[1]
-            context.bot.send_message(chat_id=update.effective_chat.id, text='Would you like to...', 
-                reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("More Information", callback_data='1_2 Information'),InlineKeyboardButton("Leave Comment", callback_data='1_2 Comment')],[InlineKeyboardButton("Check Reviews", callback_data='1_2 Review'),InlineKeyboardButton("Give Rating", callback_data='1_2 Rating')]]))
+            raw = omdb.get(imdbid=movie_chosen)
+            query.edit_message_text(text='You have selected : \n \n' + raw['title'])
+            context.bot.send_message(chat_id=update.effective_chat.id, text='\n \n' + 'Would you like to...',reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("More Information", callback_data='1_2 Information'),InlineKeyboardButton("Leave Comment", callback_data='1_2 Comment')],[InlineKeyboardButton("Check Reviews", callback_data='1_2 Review'),InlineKeyboardButton("Give Rating", callback_data='1_2 Rating')]]))
     elif query.data.split(" ",1)[0] == '1_2':
         if query.data.split(" ",1)[1] == 'Information':
-            raw = omdb.get(title=movie_chosen)
-            videos = Search(movie_chosen + " Trailer", limit = 1).videos()
-            query.edit_message_text(text=f"You selected: {movie_chosen}")
-            context.bot.send_message(chat_id=update.effective_chat.id, text=raw['plot'])
+            raw = omdb.get(imdbid=movie_chosen)
+            videos = Search(raw['title'] + " Trailer", limit = 1).videos()
+            query.edit_message_text(text=raw['plot'])
             context.bot.send_photo(chat_id=update.effective_chat.id, photo=raw['poster'])
             context.bot.send_message(chat_id=update.effective_chat.id, text="https://youtu.be/" + str(videos[0]['id']))
-        #    context.bot.send_message(chat_id=update.effective_chat.id, text='Do you like the movie?:', 
-        #        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Like", callback_data='Like'),InlineKeyboardButton("Dislike", callback_data='Dislike')]]))
         elif query.data.split(" ",1)[1] == 'Comment':
-            context.bot.send_message(chat_id=update.effective_chat.id, text='Please leave comment')
-            global comment_ind
-            comment_ind = 1
+            query.edit_message_text(text='Please leave comment')
+            global g_comment_ind
+            g_comment_ind = 1
         elif query.data.split(" ",1)[1] == 'Review':
             ref = db.reference("/Comment/" + movie_chosen + "/")
             comment_dict = ref.get()
-            dict_len = len(comment_dict)
-            if not comment_dict:
-                update.message.reply_text('No comment of this movie in our database! Please share your comment.')
+            if comment_dict is None:
+                query.edit_message_text(text='No comment of this movie in our database! Please share your comment.')
             else:
+                dict_len = len(comment_dict)
                 all_review = 'Reviews : \n'
                 if dict_len < 3:
                     for k1, v1 in comment_dict.items():
                         all_review += '\n' + list(v1.keys())[0] + ' : ' + list(v1.values())[0]
-                    context.bot.send_message(chat_id=update.effective_chat.id, text=all_review)
+                    query.edit_message_text(text=all_review)
                 else:
                     print(sorted(comment_dict.items())[:3])
                     for k1, v1 in sorted(comment_dict.items())[:3]:
                         all_review += '\n' + list(v1.keys())[0] + ' : ' + list(v1.values())[0]
-                    context.bot.send_message(chat_id=update.effective_chat.id, text=all_review)
+                    query.edit_message_text(text=all_review)
         elif query.data.split(" ",1)[1] == 'Rating':
-            keyboard = [[1, 2, 3, 4, 5],[6, 7, 8, 9, 10]]
-            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
-            context.bot.send_message(chat_id=update.effective_chat.id, text='Please rate the movie in 1-10.', reply_markup=reply_markup)
-            global rating_ind
-            rating_ind = 1
+            global g_keyboard
+            g_keyboard = [[1, 2, 3, 4, 5],[6, 7, 8, 9, 10]]
+            global g_reply_markup
+            g_reply_markup = ReplyKeyboardMarkup(g_keyboard, one_time_keyboard=True, resize_keyboard=True)
+            context.bot.send_message(chat_id=update.effective_chat.id, text='Please rate the movie in 1-10.', reply_markup=g_reply_markup)
+            global g_rating_ind
+            g_rating_ind = 1
     elif query.data.split(" ",1)[0] == '1_3' :
-        if query.data.split(" ",1)[1] == 'Confirm' and comment_ind == 1 and rating_ind==0:
-            context.bot.send_message(chat_id=update.effective_chat.id, text='Comment Shared!')
+        if query.data.split(" ",1)[1] == 'Confirm' and g_comment_ind == 1 and g_rating_ind==0:
             ref = db.reference('/Comment/' + movie_chosen)
-            userid = query.from_user['id']
-            global comment_text
-            print(comment_text)
-            value = {userid:comment_text}
+            key = str(query.from_user['id'])+'_'+str(query.from_user['first_name'])
+            global g_comment_text
+            value = {key:g_comment_text}
             ref.push().set(value)
-            comment_ind = 0
+            query.edit_message_text(text='Comment Shared!')
+            g_comment_ind = 0
             del movie_chosen
-            del comment_text
-        elif query.data.split(" ",1)[1] == 'Reenter' and comment_ind == 1 and rating_ind==0:
-            context.bot.send_message(chat_id=update.effective_chat.id, text='Please Reenter!')
+            del g_comment_text
+        elif query.data.split(" ",1)[1] == 'Reenter' and g_comment_ind == 1 and g_rating_ind==0:
+            query.edit_message_text(text='Please Reenter!')
 
-        elif query.data.split(" ",1)[1] == 'Confirm' and comment_ind == 0 and rating_ind==1:
-            context.bot.send_message(chat_id=update.effective_chat.id, text='Rating Shared!')
+        elif query.data.split(" ",1)[1] == 'Confirm' and g_comment_ind == 0 and g_rating_ind==1:
             ref = db.reference('/Rating/' + movie_chosen)
-            userid = query.from_user['id']
-            global rating
-            value = {userid:int(rating)}
+            key = str(query.from_user['id'])+'_'+str(query.from_user['first_name'])
+            global g_rating
+            global g_rating_review
+            value = {key:int(g_rating)}
             ref.push().set(value)
-            rating_ind = 0
+            reply_markup = ReplyKeyboardRemove()
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=g_rating_review.message_id)
+            context.bot.send_message(chat_id=update.effective_chat.id,text='Rating Shared!',reply_markup=reply_markup)
+            g_rating_ind = 0
             del movie_chosen
-            del rating
+            del g_rating
+            del g_rating_review
+        elif query.data.split(" ",1)[1] == 'Reenter' and g_comment_ind == 0 and g_rating_ind==1:
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=g_rating_review.message_id)
+            context.bot.send_message(chat_id=update.effective_chat.id, text='Please Reenter!', reply_markup=g_reply_markup)
     
 def txt_msg(update, context):
-    if comment_ind == 1 and rating_ind==0:
-        global comment_text
-        comment_text = update.message.text.upper()
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Please review your comment: ' + '\n' + comment_text, 
+    if g_comment_ind == 1 and g_rating_ind==0:
+        global g_comment_text
+        g_comment_text = update.message.text.upper()
+        context.bot.send_message(chat_id=update.effective_chat.id, text='Please review your comment: ' + '\n \n' + g_comment_text,
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Confirm", callback_data='1_3 Confirm'),InlineKeyboardButton("Reenter", callback_data='1_3 Reenter')]]))
-    elif comment_ind == 0 and rating_ind==1:
-        global rating
-        rating = update.message.text.upper()
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Please review your rating: ' + '\n' + rating, 
+
+    elif g_comment_ind == 0 and g_rating_ind==1:
+        global g_rating
+        g_rating = update.message.text.upper()
+        context.user_data['rating_review']= context.bot.send_message(chat_id=update.effective_chat.id, text='Please review your rating: ' + '\n \n' + g_rating,
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Confirm", callback_data='1_3 Confirm'),InlineKeyboardButton("Reenter", callback_data='1_3 Reenter')]]))
-    elif comment_ind == 0 and rating_ind==0:
+        global g_rating_review
+        g_rating_review = context.user_data['rating_review']
+    elif g_comment_ind == 0 and g_rating_ind==0:
         reply_message = update.message.text.upper()
         context.bot.send_message(chat_id=update.effective_chat.id, text= reply_message)
 

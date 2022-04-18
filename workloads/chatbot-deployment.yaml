@@ -6,6 +6,8 @@ metadata:
   namespace: chatbot
   labels:
     app: chatbot
+  annotations:
+    fluxcd.io/automated: 'true'
 spec:
   selector:
     matchLabels:
