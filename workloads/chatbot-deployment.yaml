@@ -1,0 +1,22 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbot-deployment
+  namespace: chatbot
+  labels:
+    app: chatbot
+spec:
+  selector:
+    matchLabels:
+      app: chatbot
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: chatbot
+    spec:
+      containers:
+      - name: chatbot
+        image: asia.gcr.io/comp7940-group21/pj_chatbot:latest
+
