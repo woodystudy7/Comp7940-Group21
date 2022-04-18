@@ -77,7 +77,7 @@ def average(lst):
 def help(update: Updater, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     try:
-        line1 = "/help" + "\n" + "- command list test2"
+        line1 = "/help" + "\n" + "- command list test3"
         line2 = "/search <keyword>" + "\n" + "- search movie"
         line3 = "/toprate" + "\n" + "- top 10 rated movie"
         line4 = "/contribute" + "\n" + "- most active commentator"
