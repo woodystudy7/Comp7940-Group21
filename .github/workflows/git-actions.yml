@@ -26,3 +26,17 @@ jobs:
           image_name: pj_chatbot
           dockerfile: ./Dockerfile
           build_args: ACCESS_TOKEN=${{ secrets.ACCESS_TOKEN }},OMDB_API_KEY=${{ secrets.OMDB_API_KEY }},FIREBASE_URL=${{ secrets.FIREBASE_URL }}
+      - name: k8s remove pods
+        uses: steebchen/kubectl@master
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+          KUBECTL_VERSION: "1.22"
+        with:
+          args: scale deployment chatbot-deployment -n chatbot --replicas 0
+      - name: k8s remove pods
+        uses: steebchen/kubectl@master
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+          KUBECTL_VERSION: "1.22"
+        with:
+          args: scale deployment chatbot-deployment -n chatbot --replicas 1
