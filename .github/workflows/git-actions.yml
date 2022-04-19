@@ -7,6 +7,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: k8s restart pods
+        uses: steebchen/kubectl@master
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+          KUBECTL_VERSION: "1.23"
+        with:
+          args: '"rollout restart deployment chatbot-deployment -n chatbot"'
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -30,6 +37,6 @@ jobs:
         uses: steebchen/kubectl@master
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
-          KUBECTL_VERSION: "1.22"
+          KUBECTL_VERSION: "1.23"
         with:
           args: '"rollout restart deployment chatbot-deployment -n chatbot"'
