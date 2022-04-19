@@ -7,13 +7,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+
       - name: k8s restart pods
-        uses: steebchen/kubectl@master
+        uses: ameydev/gke-kubectl-action@master
         env:
-          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
-          KUBECTL_VERSION: "1.23"
+          PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          APPLICATION_CREDENTIALS: ${{ secrets.GCLOUD_SERVICE_KEY }}
+          CLUSTER_NAME: ${{ secrets.GKE_CLUSTER_NAME }}
+          ZONE_NAME: us-central1-c
         with:
-          args: '"rollout restart deployment chatbot-deployment -n chatbot"'
+          args: rollout restart deployment chatbot-deployment -n chatbot
+
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -33,10 +37,3 @@ jobs:
           image_name: pj_chatbot
           dockerfile: ./Dockerfile
           build_args: ACCESS_TOKEN=${{ secrets.ACCESS_TOKEN }},OMDB_API_KEY=${{ secrets.OMDB_API_KEY }},FIREBASE_URL=${{ secrets.FIREBASE_URL }}
-      - name: k8s restart pods
-        uses: steebchen/kubectl@master
-        env:
-          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
-          KUBECTL_VERSION: "1.23"
-        with:
-          args: '"rollout restart deployment chatbot-deployment -n chatbot"'
