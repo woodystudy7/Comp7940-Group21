@@ -11,17 +11,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: k8s restart pods
-        uses: ameydev/gke-kubectl-action@master
-        env:
-          PROJECT_ID: ${{ secrets.PROJECT_ID }}
-          APPLICATION_CREDENTIALS: ${{ secrets.GCLOUD_SERVICE_KEY }}
-          CLUSTER_NAME: ${{ secrets.GKE_CLUSTER_NAME }}
-          ZONE_NAME: asia-east1-a
-        with:
-          args: rollout restart deployment chatbot-deployment -n chatbot
-
-      
       - name: Setup Google Cloud
         uses: google-github-actions/setup-gcloud@main
       - name: Security vulnerabilities scan
@@ -37,3 +26,12 @@ jobs:
           image_name: pj_chatbot
           dockerfile: ./Dockerfile
           build_args: ACCESS_TOKEN=${{ secrets.ACCESS_TOKEN }},OMDB_API_KEY=${{ secrets.OMDB_API_KEY }},FIREBASE_URL=${{ secrets.FIREBASE_URL }}
+      - name: k8s restart pods
+        uses: ameydev/gke-kubectl-action@master
+        env:
+          PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          APPLICATION_CREDENTIALS: ${{ secrets.GCLOUD_SERVICE_KEY }}
+          CLUSTER_NAME: ${{ secrets.GKE_CLUSTER_NAME }}
+          ZONE_NAME: asia-east1-a
+        with:
+          args: rollout restart deployment chatbot-deployment -n chatbot
