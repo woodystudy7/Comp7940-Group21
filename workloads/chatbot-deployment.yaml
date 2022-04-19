@@ -12,7 +12,7 @@ spec:
   selector:
     matchLabels:
       app: chatbot
-  replicas: 1
+  replicas: 2
   strategy:
     type: RollingUpdate
     rollingUpdate:
