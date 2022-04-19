@@ -7,21 +7,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: k8s restart pods
         uses: ameydev/gke-kubectl-action@master
         env:
           PROJECT_ID: ${{ secrets.PROJECT_ID }}
           APPLICATION_CREDENTIALS: ${{ secrets.GCLOUD_SERVICE_KEY }}
           CLUSTER_NAME: ${{ secrets.GKE_CLUSTER_NAME }}
-          ZONE_NAME: us-central1-c
+          ZONE_NAME: asia-east1-a
         with:
           args: rollout restart deployment chatbot-deployment -n chatbot
 
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+      
       - name: Setup Google Cloud
         uses: google-github-actions/setup-gcloud@main
       - name: Security vulnerabilities scan
