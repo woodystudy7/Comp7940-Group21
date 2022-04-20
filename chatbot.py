@@ -38,6 +38,7 @@ def main():
 
     #OMDB
     #OMDB_API_KEY= '70dae977'
+    #omdb.set_default('apikey', OMDB_API_KEY)
     omdb.set_default('apikey', os.environ['OMDB_API_KEY'])
 
     dispatcher = updater.dispatcher
@@ -145,10 +146,10 @@ def contribute(update: Updater, context: CallbackContext) -> None:
                     elif userid in user_comment_count.keys():
                         user_comment_count[userid] += 1
             comb_list.append(user_comment_count)
-            result=cnt(comb_list)
-            active_user = max(result, key=result.get)
-            comment_vol = user_comment_count[active_user]
-            msg_txt_2='\n - ' + str(comment_vol) + ' comment'
+            #result=cnt(comb_list)
+            #active_user = max(result, key=result.get)
+            #comment_vol = user_comment_count[active_user]
+            #msg_txt_2='\n - ' + str(comment_vol) + ' comment'
         if rating_dict is not None:
             for k1, v1 in rating_dict.items():
                 for k2, v2 in v1.items():
@@ -159,19 +160,32 @@ def contribute(update: Updater, context: CallbackContext) -> None:
                         user_rating_count[userid] += 1
             comb_list.append(user_rating_count)
             result=cnt(comb_list)
-            active_user = max(result, key=result.get)
-            rating_vol = user_rating_count[active_user]
-            msg_txt_3='\n - ' + str(rating_vol) + ' rating'
+            #active_user = max(result, key=result.get)
+            #rating_vol = user_rating_count[active_user]
+            #msg_txt_3='\n - ' + str(rating_vol) + ' rating'
         result=cnt(comb_list)
-        active_user = max(result, key=result.get)
-        if active_user in user_rating_count and active_user in user_comment_count:
-            update.message.reply_text('Congratulation to our most active user. \n' + 'user_' + active_user.split('_')[1] + ' has left ' + msg_txt_2 + msg_txt_3)
-        elif active_user in user_rating_count and active_user not in user_comment_count:
-            rating_vol = user_rating_count[active_user]
-            update.message.reply_text('Congratulation to our most active user. \n' + 'user_' + active_user.split('_')[1] + ' has left ' + msg_txt_3)
-        elif active_user in user_comment_count and active_user not in user_rating_count:
-            comment_vol = user_comment_count[active_user]
-            update.message.reply_text('Congratulation to our most active user. \n' + 'user_' + active_user.split('_')[1] + ' has left ' + msg_txt_2)
+        #print(result)
+        #print(user_rating_count)
+        #print(user_comment_count)
+        sorted_result=sorted_user_raing_avg_keys = sorted(result, key=result.get, reverse=True)
+        msg_txt='Congratulation to our active users! \n'
+        if len(sorted_result) < 3:
+            for k3 in sorted_result:
+                if k3 in user_rating_count and k3 in user_comment_count:
+                    msg_txt += '\n' +'user_' + k3.split('_')[1] + ' : '  + str(user_comment_count[k3]) + ' comment & ' + str(user_rating_count[k3]) + ' rating' + '\n'
+                elif k3 in user_rating_count and k3 not in user_comment_count:
+                    msg_txt += '\n' +'user_' + k3.split('_')[1] + ' : '  + str(user_rating_count[k3]) + ' rating' + '\n'
+                elif k3 in user_comment_count and k3 not in user_rating_count:
+                    msg_txt += '\n' +'user_' + k3.split('_')[1] + ' : '  + str(user_comment_count[k3]) + ' comment' + '\n'
+        else:
+            for k3 in sorted_result[:3]:
+                if k3 in user_rating_count and k3 in user_comment_count:
+                    msg_txt += '\n' +'user_' + k3.split('_')[1] + ' : ' + str(user_comment_count[k3]) + ' comment & ' + str(user_rating_count[k3]) + ' rating' + '\n'
+                elif k3 in user_rating_count and k3 not in user_comment_count:
+                    msg_txt += '\n' +'user_' + k3.split('_')[1] + ' : ' + str(user_rating_count[k3]) + ' rating' + '\n'
+                elif k3 in user_comment_count and k3 not in user_rating_count:
+                    msg_txt += '\n' +'user_' + k3.split('_')[1] + ' : ' + str(user_comment_count[k3]) + ' comment' + '\n'
+        update.message.reply_text(msg_txt)
     except (IndexError, ValueError):
         update.message.reply_text('No comment or rating in our database! Please share your thoughts with us.')
 
@@ -183,22 +197,33 @@ def recommend(update: Updater, context: CallbackContext) -> None:
         user_raing_avg = {}
         if rating_dict is not None:
             for k1, v1 in rating_dict.items():
-                movieid = str(k1)
+                raw = omdb.get(imdbid=k1)
+                movieid = k1+'_'+raw['title']
                 movierate = []
                 for k2, v2 in v1.items():
                     movierate.append(list(v2.values())[0])
                     movierate_avg = average(movierate)
                     user_raing_avg[movieid] = movierate_avg
             sorted_user_raing_avg_keys = sorted(user_raing_avg, key=user_raing_avg.get, reverse=True)
+            print(sorted_user_raing_avg_keys)
             if len(sorted_user_raing_avg_keys) < 10:
-                print(len(sorted_user_raing_avg_keys))
                 randnbr=np.random.randint(1, len(sorted_user_raing_avg_keys))
-                print(randnbr)
                 rmd = sorted_user_raing_avg_keys[randnbr]
+                videos = Search(rmd + " Trailer", limit = 1).videos()
+                rmd_chk = omdb.get(imdbid=rmd.split("_",1)[0])
+                context.bot.send_message(chat_id=update.effective_chat.id, text='We recommend you check out \n' + rmd_chk['title'])
+                context.bot.send_message(chat_id=update.effective_chat.id, text=rmd_chk['plot'])
+                context.bot.send_photo(chat_id=update.effective_chat.id, photo=rmd_chk['poster'])
+                context.bot.send_message(chat_id=update.effective_chat.id, text="https://youtu.be/" + str(videos[0]['id']))
             else:
                 randnbr=np.random.randint(1,10)
                 rmd = sorted_user_raing_avg_keys[10:][randnbr]
-            update.message.reply_text('We recommend you check out \n' + rmd)
+                videos = Search(rmd + " Trailer", limit = 1).videos()
+                rmd_chk = omdb.get(imdbid=rmd.split("_",1)[0])
+                context.bot.send_message(chat_id=update.effective_chat.id, text='We recommend you check out \n' + rmd_chk['title'])
+                context.bot.send_message(chat_id=update.effective_chat.id, text=rmd_chk['plot'])
+                context.bot.send_photo(chat_id=update.effective_chat.id, photo=rmd_chk['poster'])
+                context.bot.send_message(chat_id=update.effective_chat.id, text="https://youtu.be/" + str(videos[0]['id']))
         else:
             update.message.reply_text('No recommendation from other users at the moment! Please share your thoughts with us.')
     except (IndexError, ValueError):
@@ -238,6 +263,8 @@ def button(update: Updater, context: CallbackContext) -> None:
             global movie_chosen
             movie_chosen = query.data.split(" ",1)[1]
             raw = omdb.get(imdbid=movie_chosen)
+            print(type(movie_chosen))
+            print(movie_chosen)
             query.edit_message_text(text='You have selected : \n \n' + raw['title'])
             context.bot.send_message(chat_id=update.effective_chat.id, text='\n \n' + 'Would you like to...',reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("More Information", callback_data='1_2 Information'),InlineKeyboardButton("Leave Comment", callback_data='1_2 Comment')],[InlineKeyboardButton("Check Reviews", callback_data='1_2 Review'),InlineKeyboardButton("Give Rating", callback_data='1_2 Rating')]]))
     elif query.data.split(" ",1)[0] == '1_2':
