@@ -3,42 +3,31 @@ from logging.handlers import RotatingFileHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
-# The messageHandler is used for all message updates
 import configparser
 import os
 import logging
 import omdb
 from py_youtube import Search ,Data
-
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
-
 import numpy as np 
 import re
 import collections
 
 def main():
     # Load your token and create an Updater for your Bot
-    #config = configparser.ConfigParser()
-    #config.read('config.ini')
 
     #TELEGRAM
-    #updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
     updater = Updater(token=(os.environ['ACCESS_TOKEN']), use_context=True)
 
     #FIREBASE
     cred = credentials.Certificate('firebase-adminsdk.json')
-    #firebase_admin.initialize_app(cred, {
-    #    'databaseURL': config['FIREBASE']['URL']
-    #})
     firebase_admin.initialize_app(cred, {
         'databaseURL': os.environ['FIREBASE_URL']
     })
 
     #OMDB
-    #OMDB_API_KEY= '70dae977'
-    #omdb.set_default('apikey', OMDB_API_KEY)
     omdb.set_default('apikey', os.environ['OMDB_API_KEY'])
 
     dispatcher = updater.dispatcher
@@ -201,7 +190,6 @@ def recommend(update: Updater, context: CallbackContext) -> None:
                 for i in range(len(sorted_user_rating_avg_keys)):
                     nbr_lst.append(i)
                 randnbr=np.random.choice(nbr_lst)
-                print(randnbr)
                 rmd = sorted_user_rating_avg_keys[randnbr]
                 videos = Search(rmd + " Trailer", limit = 1).videos()
                 rmd_chk = omdb.get(imdbid=rmd.split("_",1)[0])
@@ -259,8 +247,6 @@ def button(update: Updater, context: CallbackContext) -> None:
             global movie_chosen
             movie_chosen = query.data.split(" ",1)[1]
             raw = omdb.get(imdbid=movie_chosen)
-            print(type(movie_chosen))
-            print(movie_chosen)
             query.edit_message_text(text='You have selected : \n \n' + raw['title'])
             context.user_data['menu']=context.bot.send_message(chat_id=update.effective_chat.id, text='\n \n' + 'Would you like to...',reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("More Information", callback_data='1_2 Information'),InlineKeyboardButton("Leave Comment", callback_data='1_2 Comment')],[InlineKeyboardButton("Check Reviews", callback_data='1_2 Review'),InlineKeyboardButton("Give Rating", callback_data='1_2 Rating')]]))
             g_menu_button = context.user_data['menu']
@@ -288,7 +274,6 @@ def button(update: Updater, context: CallbackContext) -> None:
                         all_review += '\n' + list(v1.keys())[0].split('_')[1].upper() + ' : ' + list(v1.values())[0]
                     query.edit_message_text(text=all_review)
                 else:
-                    print(sorted(comment_dict.items())[:3])
                     for k1, v1 in sorted(comment_dict.items())[:3]:
                         all_review += '\n' + list(v1.keys())[0].split('_')[1].upper() + ' : ' + list(v1.values())[0]
                     query.edit_message_text(text=all_review)
@@ -339,7 +324,6 @@ def txt_msg(update, context):
         g_comment_text = update.message.text.upper()
         context.bot.send_message(chat_id=update.effective_chat.id, text='Please review your comment: ' + '\n \n' + g_comment_text,
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Confirm", callback_data='1_3 Confirm'),InlineKeyboardButton("Reenter", callback_data='1_3 Reenter')]]))
-
     elif g_comment_ind == 0 and g_rating_ind==1:
         global g_rating
         g_rating = update.message.text.upper()
@@ -350,13 +334,6 @@ def txt_msg(update, context):
     elif g_comment_ind == 0 and g_rating_ind==0:
         reply_message = update.message.text.upper()
         context.bot.send_message(chat_id=update.effective_chat.id, text= reply_message)
-
-def comment(update: Updater, context: CallbackContext) -> None:
-    """Send a message when the command /comment is issued."""
-    try:
-        msg = "/help - command list" + "/n" + "/search - search movie"
-    except (IndexError, ValueError):
-        update.message.reply_text('Usage: /comment <keyword>')
 
 if __name__ == '__main__':
     main()
