@@ -20,17 +20,25 @@ import collections
 
 def main():
     # Load your token and create an Updater for your Bot
+    #config = configparser.ConfigParser()
+    #config.read('config.ini')
 
     #TELEGRAM
+    #updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
     updater = Updater(token=(os.environ['ACCESS_TOKEN']), use_context=True)
 
     #FIREBASE
     cred = credentials.Certificate('firebase-adminsdk.json')
+    #firebase_admin.initialize_app(cred, {
+    #    'databaseURL': config['FIREBASE']['URL']
+    #})
     firebase_admin.initialize_app(cred, {
         'databaseURL': os.environ['FIREBASE_URL']
     })
 
     #OMDB
+    #OMDB_API_KEY= '70dae977'
+    #omdb.set_default('apikey', OMDB_API_KEY)
     omdb.set_default('apikey', os.environ['OMDB_API_KEY'])
 
     dispatcher = updater.dispatcher
@@ -148,26 +156,27 @@ def contribute(update: Updater, context: CallbackContext) -> None:
                         user_rating_count[userid] += 1
             comb_list.append(user_rating_count)
             result=cnt(comb_list)
-        result=cnt(comb_list)
-        sorted_result=sorted_user_raing_avg_keys = sorted(result, key=result.get, reverse=True)
-        msg_txt='Congratulation to our active users! \n'
-        if len(sorted_result) < 3:
-            for k3 in sorted_result:
-                if k3 in user_rating_count and k3 in user_comment_count:
-                    msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : '  + str(user_comment_count[k3]) + ' comment & ' + str(user_rating_count[k3]) + ' rating' + '\n'
-                elif k3 in user_rating_count and k3 not in user_comment_count:
-                    msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : '  + str(user_rating_count[k3]) + ' rating' + '\n'
-                elif k3 in user_comment_count and k3 not in user_rating_count:
-                    msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : '  + str(user_comment_count[k3]) + ' comment' + '\n'
+            sorted_result=sorted_user_raing_avg_keys = sorted(result, key=result.get, reverse=True)
+            msg_txt='Congratulation to our active users! \n'
+            if len(sorted_result) < 3:
+                for k3 in sorted_result:
+                    if k3 in user_rating_count and k3 in user_comment_count:
+                        msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : '  + str(user_comment_count[k3]) + ' comment & ' + str(user_rating_count[k3]) + ' rating' + '\n'
+                    elif k3 in user_rating_count and k3 not in user_comment_count:
+                        msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : '  + str(user_rating_count[k3]) + ' rating' + '\n'
+                    elif k3 in user_comment_count and k3 not in user_rating_count:
+                        msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : '  + str(user_comment_count[k3]) + ' comment' + '\n'
+            else:
+                for k3 in sorted_result[:3]:
+                    if k3 in user_rating_count and k3 in user_comment_count:
+                        msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : ' + str(user_comment_count[k3]) + ' comment & ' + str(user_rating_count[k3]) + ' rating' + '\n'
+                    elif k3 in user_rating_count and k3 not in user_comment_count:
+                        msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : ' + str(user_rating_count[k3]) + ' rating' + '\n'
+                    elif k3 in user_comment_count and k3 not in user_rating_count:
+                        msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : ' + str(user_comment_count[k3]) + ' comment' + '\n'
+            update.message.reply_text(msg_txt)
         else:
-            for k3 in sorted_result[:3]:
-                if k3 in user_rating_count and k3 in user_comment_count:
-                    msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : ' + str(user_comment_count[k3]) + ' comment & ' + str(user_rating_count[k3]) + ' rating' + '\n'
-                elif k3 in user_rating_count and k3 not in user_comment_count:
-                    msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : ' + str(user_rating_count[k3]) + ' rating' + '\n'
-                elif k3 in user_comment_count and k3 not in user_rating_count:
-                    msg_txt += '\n' +'user_' + k3.split('_')[1].upper() + ' : ' + str(user_comment_count[k3]) + ' comment' + '\n'
-        update.message.reply_text(msg_txt)
+            update.message.reply_text('No comment or rating in our database! Please share your thoughts with us.')            
     except (IndexError, ValueError):
         update.message.reply_text('No comment or rating in our database! Please share your thoughts with us.')
 
@@ -176,7 +185,7 @@ def recommend(update: Updater, context: CallbackContext) -> None:
     try:
         ref = db.reference("/Rating/")
         rating_dict = ref.get()
-        user_raing_avg = {}
+        user_rating_avg = {}
         if rating_dict is not None:
             for k1, v1 in rating_dict.items():
                 raw = omdb.get(imdbid=k1)
@@ -185,12 +194,15 @@ def recommend(update: Updater, context: CallbackContext) -> None:
                 for k2, v2 in v1.items():
                     movierate.append(list(v2.values())[0])
                     movierate_avg = average(movierate)
-                    user_raing_avg[movieid] = movierate_avg
-            sorted_user_raing_avg_keys = sorted(user_raing_avg, key=user_raing_avg.get, reverse=True)
-            print(sorted_user_raing_avg_keys)
-            if len(sorted_user_raing_avg_keys) < 10:
-                randnbr=np.random.randint(1, len(sorted_user_raing_avg_keys))
-                rmd = sorted_user_raing_avg_keys[randnbr]
+                    user_rating_avg[movieid] = movierate_avg
+            sorted_user_rating_avg_keys = sorted(user_rating_avg, key=user_rating_avg.get, reverse=True)
+            if len(sorted_user_rating_avg_keys) < 10:
+                nbr_lst=[]
+                for i in range(len(sorted_user_rating_avg_keys)):
+                    nbr_lst.append(i)
+                randnbr=np.random.choice(nbr_lst)
+                print(randnbr)
+                rmd = sorted_user_rating_avg_keys[randnbr]
                 videos = Search(rmd + " Trailer", limit = 1).videos()
                 rmd_chk = omdb.get(imdbid=rmd.split("_",1)[0])
                 context.bot.send_message(chat_id=update.effective_chat.id, text='We recommend you check out \n' + rmd_chk['title'])
@@ -198,8 +210,9 @@ def recommend(update: Updater, context: CallbackContext) -> None:
                 context.bot.send_photo(chat_id=update.effective_chat.id, photo=rmd_chk['poster'])
                 context.bot.send_message(chat_id=update.effective_chat.id, text="https://youtu.be/" + str(videos[0]['id']))
             else:
-                randnbr=np.random.randint(1,10)
-                rmd = sorted_user_raing_avg_keys[10:][randnbr]
+                nbr_lst=[0,1,2,3,4,5,6,7,8,9]
+                randnbr=np.random.choice(nbr_lst)
+                rmd = sorted_user_rating_avg_keys[10:][randnbr]
                 videos = Search(rmd + " Trailer", limit = 1).videos()
                 rmd_chk = omdb.get(imdbid=rmd.split("_",1)[0])
                 context.bot.send_message(chat_id=update.effective_chat.id, text='We recommend you check out \n' + rmd_chk['title'])
