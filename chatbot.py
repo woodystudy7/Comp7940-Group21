@@ -20,25 +20,17 @@ import collections
 
 def main():
     # Load your token and create an Updater for your Bot
-    #config = configparser.ConfigParser()
-    #config.read('config.ini')
 
     #TELEGRAM
-    #updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
     updater = Updater(token=(os.environ['ACCESS_TOKEN']), use_context=True)
 
     #FIREBASE
     cred = credentials.Certificate('firebase-adminsdk.json')
-    #firebase_admin.initialize_app(cred, {
-    #    'databaseURL': config['FIREBASE']['URL']
-    #})
     firebase_admin.initialize_app(cred, {
         'databaseURL': os.environ['FIREBASE_URL']
     })
 
     #OMDB
-    #OMDB_API_KEY= '70dae977'
-    #omdb.set_default('apikey', OMDB_API_KEY)
     omdb.set_default('apikey', os.environ['OMDB_API_KEY'])
 
     dispatcher = updater.dispatcher
@@ -146,10 +138,6 @@ def contribute(update: Updater, context: CallbackContext) -> None:
                     elif userid in user_comment_count.keys():
                         user_comment_count[userid] += 1
             comb_list.append(user_comment_count)
-            #result=cnt(comb_list)
-            #active_user = max(result, key=result.get)
-            #comment_vol = user_comment_count[active_user]
-            #msg_txt_2='\n - ' + str(comment_vol) + ' comment'
         if rating_dict is not None:
             for k1, v1 in rating_dict.items():
                 for k2, v2 in v1.items():
@@ -160,13 +148,7 @@ def contribute(update: Updater, context: CallbackContext) -> None:
                         user_rating_count[userid] += 1
             comb_list.append(user_rating_count)
             result=cnt(comb_list)
-            #active_user = max(result, key=result.get)
-            #rating_vol = user_rating_count[active_user]
-            #msg_txt_3='\n - ' + str(rating_vol) + ' rating'
         result=cnt(comb_list)
-        #print(result)
-        #print(user_rating_count)
-        #print(user_comment_count)
         sorted_result=sorted_user_raing_avg_keys = sorted(result, key=result.get, reverse=True)
         msg_txt='Congratulation to our active users! \n'
         if len(sorted_result) < 3:
