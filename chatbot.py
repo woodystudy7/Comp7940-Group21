@@ -78,13 +78,12 @@ def cnt(lst):
 def start(update: Updater, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
     try:
-        line0 = "Welcome to movie encyclopedia, a platform where you can search for a perfect movie to watch and interact with other movie lovers."
         line1 = "/help" + " - command list"
         line2 = "/search <keyword>" + " - search movie information, give ratings, read and write comments to movies"
         line3 = "/toprate" + " - top rated movies"
         line4 = "/contribute" + " - most active commentators"
         line5 = "/recommend" + " - movie recommendation"
-        msg =  line0 + "\n"+ "\n" + line1 + "\n"+ "\n" + line2 + "\n"+ "\n" + line3 + "\n"+ "\n" + line4 + "\n"+ "\n" + line5
+        msg =  line1 + "\n"+ "\n" + line2 + "\n"+ "\n" + line3 + "\n"+ "\n" + line4 + "\n"+ "\n" + line5
         context.bot.send_message(chat_id=update.effective_chat.id, text= msg)
     except (IndexError, ValueError):
         update.message.reply_text('Usage: /start <keyword>')
