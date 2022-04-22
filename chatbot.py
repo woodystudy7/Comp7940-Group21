@@ -45,7 +45,7 @@ def main():
     dispatcher.add_handler(CommandHandler("contribute", contribute))
     dispatcher.add_handler(CommandHandler("recommend", recommend))
     dispatcher.add_handler(CommandHandler("help", help))    
-    dispatcher.add_handler(CommandHandler("start", help))    
+    dispatcher.add_handler(CommandHandler("start", start))    
     dispatcher.add_handler(CallbackQueryHandler(button))
 
     global g_comment_ind
@@ -75,7 +75,7 @@ def cnt(lst):
     result = dict(counter)
     return result
 
-def help(update: Updater, context: CallbackContext) -> None:
+def start(update: Updater, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     try:
         line1 = "/help" + " - command list"
@@ -84,6 +84,20 @@ def help(update: Updater, context: CallbackContext) -> None:
         line4 = "/contribute" + " - most active commentators"
         line5 = "/recommend" + " - movie recommendation"
         msg =  line1 + "\n"+ "\n" + line2 + "\n"+ "\n" + line3 + "\n"+ "\n" + line4 + "\n"+ "\n" + line5
+        context.bot.send_message(chat_id=update.effective_chat.id, text= msg)
+    except (IndexError, ValueError):
+        update.message.reply_text('Usage: /help <keyword>')
+
+def help(update: Updater, context: CallbackContext) -> None:
+    """Send a message when the command /help is issued."""
+    try:
+        line0 = "Greeting, Welome to our Movie Interaction Chatbot!"
+        line1 = "/help" + " - command list"
+        line2 = "/search <keyword>" + " - search movie information, give ratings, read and write comments to movies"
+        line3 = "/toprate" + " - top rated movies"
+        line4 = "/contribute" + " - most active commentators"
+        line5 = "/recommend" + " - movie recommendation"
+        msg =  line0 + "\n"+ "\n" + line1 + "\n"+ "\n" + line2 + "\n"+ "\n" + line3 + "\n"+ "\n" + line4 + "\n"+ "\n" + line5
         context.bot.send_message(chat_id=update.effective_chat.id, text= msg)
     except (IndexError, ValueError):
         update.message.reply_text('Usage: /help <keyword>')
@@ -332,9 +346,6 @@ def txt_msg(update, context):
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Confirm", callback_data='1_3 Confirm'),InlineKeyboardButton("Reenter", callback_data='1_3 Reenter')]]))
         global g_rating_review
         g_rating_review = context.user_data['rating_review']
-    elif g_comment_ind == 0 and g_rating_ind==0:
-        reply_message = update.message.text.upper()
-        context.bot.send_message(chat_id=update.effective_chat.id, text= reply_message)
 
 if __name__ == '__main__':
     main()
