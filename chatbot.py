@@ -45,6 +45,7 @@ def main():
     dispatcher.add_handler(CommandHandler("contribute", contribute))
     dispatcher.add_handler(CommandHandler("recommend", recommend))
     dispatcher.add_handler(CommandHandler("help", help))    
+    dispatcher.add_handler(CommandHandler("start", help))    
     dispatcher.add_handler(CallbackQueryHandler(button))
 
     global g_comment_ind
